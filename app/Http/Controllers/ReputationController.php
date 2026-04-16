@@ -16,16 +16,8 @@ class ReputationController extends Controller
 
     public function updateScore($userId)
     {
-        try {
-            $this->reputationService->calculateNewScore($userId);
-            
-            return response()->json([
-                'message' => 'Reputation score updated successfully.'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to update score: ' . $e->getMessage()
-            ], 500);
-        }
+        $this->reputationService->calculateNewScore($userId);
+        
+        return back()->with('success', 'Accountability Node Synced: Reliability Rating has been recalculated via AI Sentiment Analysis.');
     }
 }

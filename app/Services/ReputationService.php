@@ -10,43 +10,52 @@ class ReputationService
 {
     public function calculateNewScore($userId)
     {
+        $user = User::find($userId);
         $reviews = Review::where('user_id', $userId)->get();
 
         if ($reviews->isEmpty()) {
+            $user->update(['reputation_score' => 100]); // Reset to 100 if no reviews
             return;
         }
 
-        // Calculate weighted average of ratings (1-5)
-        $avgRating = $reviews->avg('rating');
+        $totalAiModifier = 0;
 
-        // Analyze sentiment for each review to get a modifier
-        $totalModifier = 0;
         foreach ($reviews as $review) {
-            $totalModifier += $this->analyzeSentimentWithOllama($review->review_text);
+            // Ask Ollama for a sentiment modifier between -10 and +10
+            $aiVibe = $this->analyzeSentimentWithOllama($review->review_text);
+            
+            // Logic: (Rating 1-5 * 10) + AI Modifier
+            // Example: 1 star rating (10pts) + AI sees "he broke it" (-10pts) = 0 score for that review
+            $totalAiModifier += ($review->rating * 10) + $aiVibe;
         }
-        
-        $avgModifier = $totalModifier / $reviews->count();
 
-        // Final score logic (Average Rating + Sentiment Modifier)
-        $newScore = $avgRating + $avgModifier;
+        $newScore = $totalAiModifier / $reviews->count();
 
-        // Update the user
-        User::where('id', $userId)->update(['reputation_score' => $newScore]);
+        // Ensure score stays between 0 and 100
+        $finalScore = max(0, min(100, round($newScore)));
+
+        $user->update(['reputation_score' => $finalScore]);
     }
 
-    public function analyzeSentimentWithOllama($reviewText)
+    private function analyzeSentimentWithOllama($text)
     {
-        $response = Http::post('http://localhost:11434/api/generate', [
-            'model' => 'llama3', // Ensure this model is pulled in Ollama
-            'prompt' => "Analyze the sentiment of this review and return ONLY a number between -1 and 1. Review: " . $reviewText,
-            'stream' => false,
-        ]);
+        try {
+            $response = Http::timeout(15)->post('http://localhost:11434/api/generate', [
+                'model' => 'llama3',
+                'prompt' => "Analyze the sentiment of this military equipment review: '$text'. 
+                             If the person was irresponsible or gear was damaged, return a negative number between -1 and -10. 
+                             If they were great, return a positive number between 1 and 10. 
+                             Return ONLY the number. No words.",
+                'stream' => false,
+            ]);
 
-        if ($response->successful()) {
-            $result = $response->json('response');
-            return (float) filter_var($result, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+            if ($response->successful()) {
+                $result = trim($response->json('response'));
+                return (float) $result;
+            }
+        } catch (\Exception $e) {
+            return 0; // If AI is offline, no modifier applied
         }
-
-        return 0; // Default modifier on failure
+        return 0;
     }
 }
