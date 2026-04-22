@@ -29,6 +29,13 @@
                     <small class="text-muted mt-2 d-block" style="font-size: 0.65rem;">
                         Recalculates status based on latest peer reviews using Ollama Sentiment Engine.
                     </small>
+
+                    <!-- THE APPEAL/REVIEW BUTTON -->
+                    <div class="mt-3">
+                        <a href="{{ route('reviews.create') }}" class="btn btn-outline-danger btn-sm w-100 fw-bold py-2">
+                            📢 SUBMIT APPEAL / REVIEW
+                        </a>
+                    </div>
                 </div>
             </div>
 

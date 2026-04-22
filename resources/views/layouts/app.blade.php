@@ -28,7 +28,6 @@
     <!-- Top Command Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-af sticky-top">
         <div class="container-fluid px-4">
-            <!-- FIXED: Brand link now points to Welcome page -->
             <a class="navbar-brand fw-bold tracking-tighter" href="{{ route('welcome') }}">
                 U.S. AIR FORCE | <span class="text-info">RESOURCE EXCHANGE</span>
             </a>
@@ -63,7 +62,6 @@
         <nav class="sidebar">
             <div class="p-3 text-uppercase small fw-bold text-muted tracking-widest">Command Menu</div>
             <ul class="nav flex-column">
-                <!-- FIXED: Home link -->
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('welcome') ? 'active' : '' }}" href="{{ route('welcome') }}">🏠 Main Menu / Home</a>
                 </li>
@@ -79,6 +77,10 @@
                     <a class="nav-link {{ request()->routeIs('items.create') ? 'active' : '' }}" href="{{ route('items.create') }}">➕ List New Gear (AI)</a>
                 </li>
                 @endif
+                <!-- NEW REVIEW/APPEAL LINK -->
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('reviews.create') ? 'active' : '' }}" href="{{ route('reviews.create') }}">📢 Submit Review/Appeal</a>
+                </li>
                 @endauth
             </ul>
             <div class="mt-auto p-4 small text-muted">

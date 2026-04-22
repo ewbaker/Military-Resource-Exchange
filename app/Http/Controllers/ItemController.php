@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\Loan;
 use Illuminate\Http\Request;
 use App\Services\AIService;
+use Carbon\Carbon;
 
 class ItemController extends Controller
 {
@@ -36,18 +37,13 @@ class ItemController extends Controller
 
     public function checkout($id) {
         $user = auth()->user();
-        
-        // 1. Check for OVERDUE items
         if (Loan::where('user_id', $user->id)->where('status', 'borrowed')->where('due_date', '<', now())->exists()) {
             return back()->with('error', 'ACCOUNTABILITY ALERT: Return overdue items first.');
         }
-
-        // 2. Check RANK LIMIT
         $currentCount = Loan::where('user_id', $user->id)->where('status', 'borrowed')->count();
         if ($currentCount >= $user->getBorrowingLimit()) {
             return back()->with('error', 'LIMIT REACHED: Your rank allows a maximum of ' . $user->getBorrowingLimit() . ' items.');
         }
-
         $item = Item::findOrFail($id);
         Loan::create([
             'user_id' => $user->id,
@@ -55,7 +51,6 @@ class ItemController extends Controller
             'due_date' => now()->addDays(7),
             'status' => 'borrowed',
         ]);
-
         $item->update(['availability_status' => 'on_loan']);
         return back()->with('success', 'Item checked out.');
     }
@@ -69,7 +64,14 @@ class ItemController extends Controller
 
     public function renewItem($id) {
         $loan = Loan::findOrFail($id);
-        $loan->update(['due_date' => \Carbon\Carbon::parse($loan->due_date)->addDays(7)]);
+        $dueDate = Carbon::parse($loan->due_date);
+
+        // Logic fix: Only allow renewal if within 24 hours of due date
+        if ($dueDate->isPast() || $dueDate->diffInHours(now()) > 24) {
+            return back()->with('error', 'Renewal denied: Must be within 24 hours of the due date.');
+        }
+
+        $loan->update(['due_date' => $dueDate->addDays(7)]);
         return back()->with('success', 'Loan extended by 7 days.');
     }
 }
